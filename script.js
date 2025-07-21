@@ -1,3 +1,90 @@
+// Show Save Routine button after generating a routine
+// Show Save Routine button underneath the user input
+function showSaveRoutineButton(routineText, products) {
+  // Only show if not already present
+  if (document.getElementById("saveRoutineBtn")) return;
+  const btn = document.createElement("button");
+  btn.id = "saveRoutineBtn";
+  btn.className = "generate-btn";
+  btn.style.marginTop = "18px";
+  btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Routine';
+  // Place the button after the chat form (user input)
+  if (chatForm && chatForm.parentNode) {
+    chatForm.parentNode.insertBefore(btn, chatForm.nextSibling);
+  }
+  btn.addEventListener("click", function () {
+    saveRoutine(routineText, products);
+    btn.disabled = true;
+    btn.innerHTML = "Saved!";
+    setTimeout(() => {
+      btn.remove();
+    }, 1200);
+  });
+}
+
+// Save routine to localStorage
+function saveRoutine(routineText, products) {
+  const routines = JSON.parse(localStorage.getItem("myRoutines") || "[]");
+  const timestamp = new Date().toLocaleString();
+  routines.unshift({
+    id: Date.now(),
+    title: `Routine (${timestamp})`,
+    text: routineText,
+    products: products.map((p) => ({
+      name: p.name,
+      brand: p.brand,
+      category: p.category,
+    })),
+  });
+  localStorage.setItem("myRoutines", JSON.stringify(routines));
+  renderMyRoutines();
+}
+
+// Render My Routines section
+function renderMyRoutines() {
+  const routines = JSON.parse(localStorage.getItem("myRoutines") || "[]");
+  const list = document.getElementById("myRoutinesList");
+  if (!list) return;
+  if (routines.length === 0) {
+    list.innerHTML =
+      '<div class="placeholder-message">No routines saved yet.</div>';
+    return;
+  }
+  list.innerHTML = routines
+    .map(
+      (r) => `
+    <div class="routine-card">
+      <div class="routine-title">${r.title}</div>
+      <div class="routine-products">${r.products
+        .map(
+          (p) =>
+            `${p.name} <span style='color:#888;font-size:12px;'>(${p.brand}, ${p.category})</span>`
+        )
+        .join("<br>")}</div>
+      <div class="routine-text">${r.text}</div>
+      <button class="delete-routine-btn" data-id="${r.id}">Delete</button>
+    </div>
+  `
+    )
+    .join("");
+  // Add delete listeners
+  document.querySelectorAll(".delete-routine-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      deleteRoutine(Number(btn.getAttribute("data-id")));
+    });
+  });
+}
+
+// Delete a routine
+function deleteRoutine(id) {
+  let routines = JSON.parse(localStorage.getItem("myRoutines") || "[]");
+  routines = routines.filter((r) => r.id !== id);
+  localStorage.setItem("myRoutines", JSON.stringify(routines));
+  renderMyRoutines();
+}
+
+// Render routines on page load
+window.addEventListener("DOMContentLoaded", renderMyRoutines);
 /* Get references to DOM elements */
 const categoryFilter = document.getElementById("categoryFilter");
 const productsContainer = document.getElementById("productsContainer");
@@ -7,6 +94,16 @@ const selectedProductsList = document.getElementById("selectedProductsList");
 
 /* Store selected products by their id */
 let selectedProductIds = [];
+
+// Load selected products from localStorage if available
+if (localStorage.getItem("selectedProductIds")) {
+  try {
+    selectedProductIds =
+      JSON.parse(localStorage.getItem("selectedProductIds")) || [];
+  } catch (e) {
+    selectedProductIds = [];
+  }
+}
 let allProducts = [];
 
 /* Show initial placeholder until user selects a category */
@@ -67,12 +164,21 @@ function toggleProductSelection(id) {
   } else {
     selectedProductIds.push(id);
   }
+  // Save to localStorage
+  localStorage.setItem(
+    "selectedProductIds",
+    JSON.stringify(selectedProductIds)
+  );
 }
 
 /* Update the Selected Products section */
 function updateSelectedProductsList() {
   if (selectedProductIds.length === 0) {
-    selectedProductsList.innerHTML = `<div class="placeholder-message">No products selected yet.</div>`;
+    selectedProductsList.innerHTML = `<div class="placeholder-message">No products selected yet.</div>
+      <button id="clearAllBtn" class="generate-btn" style="margin-top:12px; background:#ff003b;">Clear All</button>`;
+    document
+      .getElementById("clearAllBtn")
+      .addEventListener("click", clearAllSelections);
     return;
   }
   const selected = allProducts.filter((p) => selectedProductIds.includes(p.id));
@@ -90,6 +196,8 @@ function updateSelectedProductsList() {
     `
     )
     .join("");
+  // Add clear all button
+  selectedProductsList.innerHTML += `<button id="clearAllBtn" class="generate-btn" style="margin-top:12px; background:#ff003b;">Clear All</button>`;
 
   // Add event listeners for remove buttons
   document.querySelectorAll(".remove-btn").forEach((btn) => {
@@ -97,13 +205,29 @@ function updateSelectedProductsList() {
       e.stopPropagation(); // Prevent card click
       const id = Number(btn.getAttribute("data-id"));
       toggleProductSelection(id);
-      // Re-render products and selected list
       displayProducts(
         allProducts.filter((p) => p.category === categoryFilter.value)
       );
       updateSelectedProductsList();
     });
   });
+  // Add event listener for clear all
+  document
+    .getElementById("clearAllBtn")
+    .addEventListener("click", clearAllSelections);
+}
+
+// Remove all selections and update localStorage
+function clearAllSelections() {
+  selectedProductIds = [];
+  localStorage.setItem(
+    "selectedProductIds",
+    JSON.stringify(selectedProductIds)
+  );
+  displayProducts(
+    allProducts.filter((p) => p.category === categoryFilter.value)
+  );
+  updateSelectedProductsList();
 }
 
 /* Filter and display products when category changes */
@@ -116,86 +240,156 @@ categoryFilter.addEventListener("change", async (e) => {
     (product) => product.category === selectedCategory
   );
   displayProducts(filteredProducts);
-});
 
-/* Initial load of all products for selection logic */
-(async () => {
-  allProducts = await loadProducts();
-  updateSelectedProductsList();
-})();
+  /* Initial load of all products for selection logic */
+  (async () => {
+    allProducts = await loadProducts();
+    updateSelectedProductsList();
+  })();
 
-// Get reference to the Generate Routine button
-const generateRoutineBtn = document.getElementById("generateRoutine");
+  // Get reference to the Generate Routine button
 
-// When the user clicks Generate Routine, send selected products to OpenAI and show the routine
-generateRoutineBtn.addEventListener("click", async () => {
-  // Get selected product objects
-  const selected = allProducts.filter((p) => selectedProductIds.includes(p.id));
-  if (selected.length === 0) {
-    chatWindow.innerHTML = `<div class="placeholder-message">Please select at least one product to generate a routine.</div>`;
-    return;
-  }
+  const generateRoutineBtn = document.getElementById("generateRoutine");
 
-  // Show loading message
-  chatWindow.innerHTML = `<div class="placeholder-message">Generating your personalized routine...</div>`;
+  // Store the chat history for context
+  let chatHistory = [];
+  let lastRoutineProducts = [];
 
-  // Prepare messages for OpenAI API
-  const messages = [
-    {
-      role: "system",
-      content:
-        "You are a skincare and beauty expert. Create a simple, step-by-step routine using only the provided products. Use friendly, clear language.",
-    },
-    {
-      role: "user",
-      content: `Here are my selected products as JSON:\n${JSON.stringify(
-        selected.map((p) => ({
-          name: p.name,
-          brand: p.brand,
-          category: p.category,
-          description: p.description,
-        })),
-        null,
-        2
-      )}\nPlease generate a routine using only these products.`,
-    },
-  ];
+  // When the user clicks Generate Routine, send selected products to OpenAI and show the routine
 
-  try {
-    // Call OpenAI API using fetch and async/await
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openai_api_key}`, // openai_api_key should be defined in secrets.js
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: messages,
-        max_tokens: 400,
-      }),
-    });
-
-    const data = await response.json();
-
-    // Check for a valid response and display the routine
-    if (
-      data.choices &&
-      data.choices[0] &&
-      data.choices[0].message &&
-      data.choices[0].message.content
-    ) {
-      chatWindow.innerHTML = `<div style="white-space: pre-line;">${data.choices[0].message.content}</div>`;
-    } else {
-      chatWindow.innerHTML = `<div class="placeholder-message">Sorry, I couldn't generate a routine. Please try again.</div>`;
+  generateRoutineBtn.addEventListener("click", async () => {
+    const selected = allProducts.filter((p) =>
+      selectedProductIds.includes(p.id)
+    );
+    if (selected.length === 0) {
+      chatWindow.innerHTML = `<div class="placeholder-message">Please select at least one product to generate a routine.</div>`;
+      return;
     }
-  } catch (error) {
-    chatWindow.innerHTML = `<div class="placeholder-message">Error: Could not connect to OpenAI API.</div>`;
-  }
-});
 
-// Chat form submission handler - placeholder for OpenAI integration
-chatForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  chatWindow.innerHTML = "Connect to the OpenAI API for a response!";
+    chatWindow.innerHTML = `<div class="placeholder-message">Generating your personalized routine...</div>`;
+
+    // Start a new chat history for this routine
+    chatHistory = [
+      {
+        role: "system",
+        content:
+          "You are a skincare and beauty expert. Only answer questions about the generated routine, skincare, haircare, makeup, fragrance, or related beauty topics. If asked about anything else, politely say you can only answer beauty-related questions.",
+      },
+      {
+        role: "user",
+        content: `Here are my selected products as JSON:\n${JSON.stringify(
+          selected.map((p) => ({
+            name: p.name,
+            brand: p.brand,
+            category: p.category,
+            description: p.description,
+          })),
+          null,
+          2
+        )}\nPlease generate a routine using only these products.`,
+      },
+    ];
+    lastRoutineProducts = selected;
+
+    try {
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openai_api_key}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: chatHistory,
+            max_tokens: 400,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (
+        data.choices &&
+        data.choices[0] &&
+        data.choices[0].message &&
+        data.choices[0].message.content
+      ) {
+        chatHistory.push({
+          role: "assistant",
+          content: data.choices[0].message.content,
+        });
+        renderChatHistory();
+        // Show the Save Routine button after generating the routine
+        showSaveRoutineButton(data.choices[0].message.content, selected);
+      } else {
+        chatWindow.innerHTML = `<div class="placeholder-message">Sorry, I couldn't generate a routine. Please try again.</div>`;
+      }
+    } catch (error) {
+      chatWindow.innerHTML = `<div class="placeholder-message">Error: Could not connect to OpenAI API.</div>`;
+    }
+  });
+
+  // Chat form submission handler for follow-up questions
+  chatForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const userInput = document.getElementById("userInput").value;
+    if (!userInput.trim()) return;
+
+    chatHistory.push({ role: "user", content: userInput });
+    renderChatHistory();
+
+    try {
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openai_api_key}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: chatHistory,
+            max_tokens: 400,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (
+        data.choices &&
+        data.choices[0] &&
+        data.choices[0].message &&
+        data.choices[0].message.content
+      ) {
+        chatHistory.push({
+          role: "assistant",
+          content: data.choices[0].message.content,
+        });
+        renderChatHistory();
+      } else {
+        chatWindow.innerHTML = `<div class="placeholder-message">Sorry, I couldn't answer that. Please try again.</div>`;
+      }
+    } catch (error) {
+      chatWindow.innerHTML = `<div class="placeholder-message">Error: Could not connect to OpenAI API.</div>`;
+    }
+    document.getElementById("userInput").value = "";
+  });
+
+  // Helper function to render the chat history
+  function renderChatHistory() {
+    chatWindow.innerHTML = chatHistory
+      .filter((msg) => msg.role === "user" || msg.role === "assistant")
+      .map((msg) => {
+        if (msg.role === "user") {
+          return `<div class="chat-message user" style="margin-bottom:8px;"><strong>You:</strong><br><span style="white-space: pre-line;">${msg.content}</span></div>`;
+        } else {
+          return `<div class="chat-message assistant" style="margin-bottom:16px;"><strong>Advisor:</strong><br><span style="white-space: pre-line;">${msg.content}</span></div>`;
+        }
+      })
+      .join("");
+  }
 });
