@@ -25,16 +25,17 @@ function showSaveRoutineButton(routineText, products) {
 // Save routine to localStorage
 function saveRoutine(routineText, products) {
   const routines = JSON.parse(localStorage.getItem("myRoutines") || "[]");
-  const timestamp = new Date().toLocaleString();
+  const routineNumber = routines.length + 1;
   routines.unshift({
     id: Date.now(),
-    title: `Routine (${timestamp})`,
+    title: `Routine ${routineNumber}`,
     text: routineText,
     products: products.map((p) => ({
       name: p.name,
       brand: p.brand,
       category: p.category,
     })),
+    expanded: false, // Track expanded/collapsed state
   });
   localStorage.setItem("myRoutines", JSON.stringify(routines));
   renderMyRoutines();
@@ -54,19 +55,53 @@ function renderMyRoutines() {
     .map(
       (r) => `
     <div class="routine-card">
-      <div class="routine-title">${r.title}</div>
-      <div class="routine-products">${r.products
-        .map(
-          (p) =>
-            `${p.name} <span style='color:#888;font-size:12px;'>(${p.brand}, ${p.category})</span>`
-        )
-        .join("<br>")}</div>
-      <div class="routine-text">${r.text}</div>
-      <button class="delete-routine-btn" data-id="${r.id}">Delete</button>
+      <div class="routine-title" style="cursor:pointer;user-select:none;">
+        ${r.title} 
+        <span style="float:right;font-size:18px;">${
+          r.expanded ? "▼" : "▶"
+        }</span>
+      </div>
+      <div class="routine-content" style="display:${
+        r.expanded ? "block" : "none"
+      }">
+        <div class="routine-products">${r.products
+          .map(
+            (p) =>
+              `${p.name} <span style='color:#888;font-size:12px;'>(${p.brand}, ${p.category})</span>`
+          )
+          .join("<br>")}</div>
+        <div class="routine-text">${r.text}</div>
+        <button class="delete-routine-btn" data-id="${r.id}">Delete</button>
+      </div>
     </div>
   `
     )
     .join("");
+  // Add click handlers for routine titles (expand/collapse)
+  document.querySelectorAll(".routine-title").forEach((title) => {
+    title.addEventListener("click", function () {
+      const card = this.closest(".routine-card");
+      const content = card.querySelector(".routine-content");
+      const arrow = this.querySelector("span");
+      const routineId = card
+        .querySelector(".delete-routine-btn")
+        .getAttribute("data-id");
+
+      // Update expanded state in localStorage
+      const routines = JSON.parse(localStorage.getItem("myRoutines") || "[]");
+      const routine = routines.find((r) => r.id === Number(routineId));
+      if (routine) {
+        routine.expanded = !routine.expanded;
+        localStorage.setItem("myRoutines", JSON.stringify(routines));
+      }
+
+      // Toggle visibility
+      content.style.display =
+        content.style.display === "none" ? "block" : "none";
+      arrow.textContent = content.style.display === "none" ? "▶" : "▼";
+    });
+  });
+
   // Add delete listeners
   document.querySelectorAll(".delete-routine-btn").forEach((btn) => {
     btn.addEventListener("click", function () {

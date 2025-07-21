@@ -1,14 +1,18 @@
 /* My Routines styles */
 .my-routines-section {
-  margin: 32px 0 24px 0;
-  padding: 18px 18px 8px 18px;
+  margin: 40px 0 30px 0;
+  padding: 24px;
   border: 2px solid #000;
   border-radius: 8px;
   background: #fff8fa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 .my-routines-section h2 {
-  font-size: 20px;
-  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 500;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ddd;
 }
 .routine-card {
   border: 1px solid #ccc;
@@ -16,20 +20,34 @@
   padding: 14px 16px;
   margin-bottom: 14px;
   background: #fff;
+  transition: box-shadow 0.2s;
+}
+.routine-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 .routine-card .routine-title {
   font-weight: 600;
   margin-bottom: 6px;
+  padding: 6px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.routine-card .routine-content {
+  padding-top: 10px;
 }
 .routine-card .routine-products {
   font-size: 14px;
   color: #444;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
 }
 .routine-card .routine-text {
   font-size: 15px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   white-space: pre-line;
+  line-height: 1.5;
 }
 .routine-card .delete-routine-btn {
   background: #ff003b;
