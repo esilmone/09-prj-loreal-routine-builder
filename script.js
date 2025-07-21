@@ -328,17 +328,14 @@ categoryFilter.addEventListener("change", async (e) => {
 
     try {
       const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
+        "https://nameless-thunder-699e.esilmone.workers.dev/",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${openai_api_key}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o",
             messages: chatHistory,
-            max_tokens: 400,
           }),
         }
       );
@@ -377,17 +374,14 @@ categoryFilter.addEventListener("change", async (e) => {
 
     try {
       const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
+        "https://nameless-thunder-699e.esilmone.workers.dev/",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${openai_api_key}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o",
             messages: chatHistory,
-            max_tokens: 400,
           }),
         }
       );
