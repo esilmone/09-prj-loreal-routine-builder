@@ -76,7 +76,7 @@
 
 /* Chat message styles */
 .chat-message.user {
-  background: linear-gradient(135deg, #ff003b 0%, #e3a535 100%);
+  background: #ff003b;
   color: #fff;
   border-radius: 12px;
   padding: 14px 18px;

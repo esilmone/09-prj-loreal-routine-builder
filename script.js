@@ -312,16 +312,9 @@ categoryFilter.addEventListener("change", async (e) => {
       },
       {
         role: "user",
-        content: `Here are my selected products as JSON:\n${JSON.stringify(
-          selected.map((p) => ({
-            name: p.name,
-            brand: p.brand,
-            category: p.category,
-            description: p.description,
-          })),
-          null,
-          2
-        )}\nPlease generate a routine using only these products.`,
+        content: `Please create a beauty routine using these products:\n${selected
+          .map((p) => `• ${p.name} by ${p.brand} (${p.category})`)
+          .join("\n")}`,
       },
     ];
     lastRoutineProducts = selected;
