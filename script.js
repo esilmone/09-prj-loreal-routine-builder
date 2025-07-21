@@ -124,7 +124,77 @@ categoryFilter.addEventListener("change", async (e) => {
   updateSelectedProductsList();
 })();
 
-/* Chat form submission handler - placeholder for OpenAI integration */
+// Get reference to the Generate Routine button
+const generateRoutineBtn = document.getElementById("generateRoutine");
+
+// When the user clicks Generate Routine, send selected products to OpenAI and show the routine
+generateRoutineBtn.addEventListener("click", async () => {
+  // Get selected product objects
+  const selected = allProducts.filter((p) => selectedProductIds.includes(p.id));
+  if (selected.length === 0) {
+    chatWindow.innerHTML = `<div class="placeholder-message">Please select at least one product to generate a routine.</div>`;
+    return;
+  }
+
+  // Show loading message
+  chatWindow.innerHTML = `<div class="placeholder-message">Generating your personalized routine...</div>`;
+
+  // Prepare messages for OpenAI API
+  const messages = [
+    {
+      role: "system",
+      content:
+        "You are a skincare and beauty expert. Create a simple, step-by-step routine using only the provided products. Use friendly, clear language.",
+    },
+    {
+      role: "user",
+      content: `Here are my selected products as JSON:\n${JSON.stringify(
+        selected.map((p) => ({
+          name: p.name,
+          brand: p.brand,
+          category: p.category,
+          description: p.description,
+        })),
+        null,
+        2
+      )}\nPlease generate a routine using only these products.`,
+    },
+  ];
+
+  try {
+    // Call OpenAI API using fetch and async/await
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openai_api_key}`, // openai_api_key should be defined in secrets.js
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: messages,
+        max_tokens: 400,
+      }),
+    });
+
+    const data = await response.json();
+
+    // Check for a valid response and display the routine
+    if (
+      data.choices &&
+      data.choices[0] &&
+      data.choices[0].message &&
+      data.choices[0].message.content
+    ) {
+      chatWindow.innerHTML = `<div style="white-space: pre-line;">${data.choices[0].message.content}</div>`;
+    } else {
+      chatWindow.innerHTML = `<div class="placeholder-message">Sorry, I couldn't generate a routine. Please try again.</div>`;
+    }
+  } catch (error) {
+    chatWindow.innerHTML = `<div class="placeholder-message">Error: Could not connect to OpenAI API.</div>`;
+  }
+});
+
+// Chat form submission handler - placeholder for OpenAI integration
 chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
   chatWindow.innerHTML = "Connect to the OpenAI API for a response!";
